@@ -27,45 +27,93 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Construir prompt para a IA
+    // Construir prompt hiper-moderno para a IA
     const prompt = `
-Cria uma página web moderna e profissional em HTML/CSS/JavaScript com base nas seguintes informações:
+/* Criado por Mindframe Media */
 
-**Tipo de projeto:** ${projectType}
-**Nome do projeto:** ${projectName}
-**Sobre o cliente/marca:** ${aboutClient}
-**Público-alvo:** ${targetAudience}
-**Tom de voz:** ${toneOfVoice}
-**Pontos-chave a comunicar:**
+Gera uma página completa em HTML, CSS e JS inline com design hiper-moderno e esteticamente impactante.
+
+**INFORMAÇÕES DO PROJETO:**
+- Tipo de projeto: ${projectType}
+- Nome do projeto: ${projectName}
+- Sobre o cliente/marca: ${aboutClient}
+- Público-alvo: ${targetAudience}
+- Tom de voz: ${toneOfVoice}
+- Pontos-chave a comunicar:
 ${keyPoints}
+${references ? `- Referências: ${references}` : ""}
 
-${references ? `**Referências:** ${references}` : ""}
+**REQUISITOS OBRIGATÓRIOS DE DESIGN:**
 
-**Requisitos técnicos:**
-- Design moderno, responsivo e profissional
-- Paleta de cores adequada ao tom de voz e público-alvo
-- Estrutura clara e navegação intuitiva
-- Animações subtis e transições suaves
-- Otimizado para mobile e desktop
-- Código limpo e bem organizado
-- Incluir meta tags para SEO
+Visual futurista e fluído
+- Hierarquia visual forte
+- Uso intenso de efeitos de luz, gradientes profundos e glassmorphism
+- Secções amplas com espaçamento generoso
+- Títulos muito grandes, expressivos e elegantes
+- Animações suaves em hover (translateY, scale, opacity)
+- Hero com gradiente dinâmico e elementos animados
+- Cartões com sombra profunda e bordas arredondadas
+- Botões com animação de brilho suave
 
-**Estrutura esperada:**
-${projectType === "website" ? "- Hero section com título impactante\n- Secções sobre serviços/produtos\n- Secção sobre a empresa\n- Call-to-action\n- Footer com contactos" : ""}
-${projectType === "pitch" ? "- Slide de abertura com título\n- Problema e solução\n- Proposta de valor\n- Equipa ou credenciais\n- Call-to-action" : ""}
-${projectType === "onepage" ? "- Hero section\n- Secções de conteúdo com scroll suave\n- Navegação fixa\n- Call-to-action\n- Footer" : ""}
+**ESPECIFICAÇÕES TÉCNICAS OBRIGATÓRIAS:**
+- Não usar frameworks (somente HTML, CSS e JS puro)
+- Criar um <style> interno com todas as classes
+- Criar um <script> no final com micro-animações simples
+- Construir estrutura mobile-first
+- Manter o design system:
 
-Retorna APENAS o código HTML completo (incluindo CSS inline ou em <style> e JavaScript em <script>). Não incluas explicações, apenas o código pronto a usar.
+**DESIGN SYSTEM OBRIGATÓRIO:**
+
+Cores (usar exatamente):
+  - Fundo primário: #0A0F1F
+  - Fundo secundário: #111828
+  - Acento azul principal: #3B82F6
+  - Acento luminoso: #60A5FA
+  - Gradiente hero: linear-gradient(135deg, #1E3A8A 0%, #0A0F1F 100%)
+  - Texto principal: #F1F5F9
+  - Texto suave: #94A3B8
+
+Tipografia (obrigatória):
+  - Font-family: "Inter", sans-serif
+  - Títulos: font-weight: 700-900; font-size: clamp(3rem, 8vw, 5rem);
+  - Subtítulos: font-size: clamp(1.5rem, 4vw, 2rem);
+  - Corpo: font-size: 1rem; line-height: 1.7;
+
+Radii e sombras:
+  - Border-radius global: 22px
+  - Cartões: box-shadow: 0 20px 45px rgba(0,0,0,0.45);
+
+Efeitos obrigatórios:
+  - Glass effect: backdrop-filter: blur(12px); opacity: 0.92;
+  - Hover com movimento: transform: translateY(-6px); transition: all 0.25s;
+  - Animações lentas: 5-12s
+
+**ESTRUTURA OBRIGATÓRIA:**
+Gera sempre:
+- Hero com gradiente dinâmico e elementos animados (partículas leves, glow pulses)
+- Secção de apresentação
+- Secção de destaques
+- Secção de benefícios
+- Secção final com CTA forte
+
+**TEXTO:**
+- Usa português claro, direto e profissional
+- O conteúdo textual deve ser adaptado às inputs fornecidas (tema, objetivo, público-alvo e estilo)
+
+**IMPORTANTE:**
+Retorna APENAS o código HTML completo (incluindo CSS inline em <style> e JavaScript em <script>). 
+Não incluas explicações, markdown, ou blocos de código. 
+Apenas o HTML puro pronto a usar, começando com <!DOCTYPE html>.
 `;
 
-    // Chamar a API da OpenAI
+    // Chamar a API da OpenAI com o novo prompt
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
           content:
-            "És um expert em web design e desenvolvimento. Crias páginas web modernas, responsivas e profissionais em HTML/CSS/JavaScript puro. O teu código é limpo, bem estruturado e otimizado.",
+            "És um expert em web design hiper-moderno e desenvolvimento. Crias páginas web com design futurista, fluído e visualmente impactante em HTML/CSS/JavaScript puro. O teu código segue rigorosamente o design system fornecido, com gradientes profundos, glassmorphism, animações suaves e tipografia ousada. Cada página que crias parece ter sido feita por uma agência de creative tech premium.",
         },
         {
           role: "user",
@@ -76,7 +124,7 @@ Retorna APENAS o código HTML completo (incluindo CSS inline ou em <style> e Jav
       max_tokens: 4000,
     });
 
-    const generatedHTML = completion.choices[0]?.message?.content || "";
+    let generatedHTML = completion.choices[0]?.message?.content || "";
 
     if (!generatedHTML) {
       return NextResponse.json(
@@ -84,6 +132,12 @@ Retorna APENAS o código HTML completo (incluindo CSS inline ou em <style> e Jav
         { status: 500 }
       );
     }
+
+    // Limpar markdown se existir
+    generatedHTML = generatedHTML
+      .replace(/```html\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim();
 
     return NextResponse.json({
       success: true,
