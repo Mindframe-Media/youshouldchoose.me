@@ -8,6 +8,9 @@ import Link from "next/link";
 
 export default function BuilderPage() {
   const [step, setStep] = useState(1);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedHTML, setGeneratedHTML] = useState("");
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     projectType: "",
     projectName: "",
@@ -30,6 +33,39 @@ export default function BuilderPage() {
 
   const handleChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
+  };
+
+  const handleGenerate = async () => {
+    if (!formData.subdomain) {
+      setError("Por favor, define um subdomínio");
+      return;
+    }
+
+    setIsGenerating(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao gerar página");
+      }
+
+      setGeneratedHTML(data.html);
+      setStep(5); // Avançar para passo de preview
+    } catch (err: any) {
+      setError(err.message || "Erro ao gerar página. Tenta novamente.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -56,29 +92,31 @@ export default function BuilderPage() {
           color: "rgba(255,255,255,0.7)",
           marginBottom: "40px",
         }}>
-          Passo {step} de 4
+          {step <= 4 ? `Passo ${step} de 4` : "Pré-visualização"}
         </p>
 
         {/* Stepper visual */}
-        <div style={{
-          display: "flex",
-          gap: "8px",
-          marginBottom: "48px",
-          justifyContent: "center",
-        }}>
-          {[1, 2, 3, 4].map((num) => (
-            <div
-              key={num}
-              style={{
-                width: "60px",
-                height: "4px",
-                borderRadius: "2px",
-                backgroundColor: num <= step ? "rgba(59,130,246,1)" : "rgba(148,163,184,0.3)",
-                transition: "background-color 0.3s",
-              }}
-            />
-          ))}
-        </div>
+        {step <= 4 && (
+          <div style={{
+            display: "flex",
+            gap: "8px",
+            marginBottom: "48px",
+            justifyContent: "center",
+          }}>
+            {[1, 2, 3, 4].map((num) => (
+              <div
+                key={num}
+                style={{
+                  width: "60px",
+                  height: "4px",
+                  borderRadius: "2px",
+                  backgroundColor: num <= step ? "rgba(59,130,246,1)" : "rgba(148,163,184,0.3)",
+                  transition: "background-color 0.3s",
+                }}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Passo 1: Tipo de projeto */}
         {step === 1 && (
@@ -368,22 +406,36 @@ export default function BuilderPage() {
               </p>
             </div>
 
+            {error && (
+              <div style={{
+                padding: "16px",
+                backgroundColor: "rgba(239,68,68,0.1)",
+                border: "1px solid rgba(239,68,68,0.3)",
+                borderRadius: "8px",
+                color: "rgba(239,68,68,1)",
+                marginBottom: "16px",
+              }}>
+                {error}
+              </div>
+            )}
+
             <button
-              onClick={() => alert("Funcionalidade de geração com IA será implementada em breve!")}
+              onClick={handleGenerate}
+              disabled={isGenerating || !formData.subdomain}
               style={{
                 width: "100%",
                 padding: "16px",
                 borderRadius: "8px",
                 border: "none",
-                backgroundColor: "rgba(59,130,246,1)",
+                backgroundColor: isGenerating || !formData.subdomain ? "rgba(148,163,184,0.3)" : "rgba(59,130,246,1)",
                 color: "white",
                 fontSize: "1.125rem",
                 fontWeight: 600,
-                cursor: "pointer",
+                cursor: isGenerating || !formData.subdomain ? "not-allowed" : "pointer",
                 marginBottom: "16px",
               }}
             >
-              Gerar página com IA
+              {isGenerating ? "A gerar página... ⏳" : "Gerar página com IA"}
             </button>
 
             <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.5)", textAlign: "center" }}>
@@ -392,74 +444,159 @@ export default function BuilderPage() {
           </div>
         )}
 
-        {/* Botões de navegação */}
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginTop: "48px",
-          paddingTop: "24px",
-          borderTop: "1px solid rgba(148,163,184,0.2)",
-        }}>
-          {step > 1 ? (
-            <button
-              onClick={handleBack}
-              style={{
-                padding: "12px 24px",
-                borderRadius: "8px",
-                border: "1px solid rgba(148,163,184,0.3)",
-                backgroundColor: "transparent",
-                color: "white",
-                fontSize: "1rem",
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
-            >
-              Voltar
-            </button>
-          ) : (
-            <Link
-              href="/"
-              style={{
-                padding: "12px 24px",
-                borderRadius: "8px",
-                border: "1px solid rgba(148,163,184,0.3)",
-                color: "white",
-                fontSize: "1rem",
-                fontWeight: 500,
-                textDecoration: "none",
-                display: "inline-block",
-              }}
-            >
-              Cancelar
-            </Link>
-          )}
+        {/* Passo 5: Preview */}
+        {step === 5 && generatedHTML && (
+          <div>
+            <h2 style={{ fontSize: "1.75rem", fontWeight: 600, marginBottom: "24px" }}>
+              Pré-visualização da página
+            </h2>
 
-          {step < 4 && (
-            <button
-              onClick={handleNext}
-              disabled={
-                (step === 1 && !formData.projectType) ||
-                (step === 2 && (!formData.projectName || !formData.userEmail || !formData.aboutClient || !formData.targetAudience || !formData.keyPoints))
-              }
-              style={{
-                padding: "12px 32px",
-                borderRadius: "8px",
-                border: "none",
-                backgroundColor: "rgba(59,130,246,1)",
-                color: "white",
-                fontSize: "1rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                opacity: (step === 1 && !formData.projectType) ||
+            <div style={{
+              padding: "24px",
+              backgroundColor: "rgba(34,197,94,0.1)",
+              border: "1px solid rgba(34,197,94,0.3)",
+              borderRadius: "12px",
+              marginBottom: "32px",
+            }}>
+              <p style={{ marginBottom: "8px", fontWeight: 600, color: "rgba(34,197,94,1)" }}>
+                ✓ Página gerada com sucesso!
+              </p>
+              <p style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.7)" }}>
+                Podes pré-visualizar abaixo. Se estiveres satisfeito, avança para o pagamento.
+              </p>
+            </div>
+
+            <div style={{
+              border: "2px solid rgba(148,163,184,0.3)",
+              borderRadius: "12px",
+              overflow: "hidden",
+              marginBottom: "32px",
+              backgroundColor: "white",
+            }}>
+              <iframe
+                srcDoc={generatedHTML}
+                style={{
+                  width: "100%",
+                  height: "600px",
+                  border: "none",
+                }}
+                title="Preview da página gerada"
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "16px" }}>
+              <button
+                onClick={() => {
+                  setStep(4);
+                  setGeneratedHTML("");
+                }}
+                style={{
+                  flex: 1,
+                  padding: "14px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(148,163,184,0.3)",
+                  backgroundColor: "transparent",
+                  color: "white",
+                  fontSize: "1rem",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                Gerar novamente
+              </button>
+
+              <button
+                onClick={() => alert("Funcionalidade de pagamento será implementada em breve!")}
+                style={{
+                  flex: 1,
+                  padding: "14px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "rgba(34,197,94,1)",
+                  color: "white",
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Avançar para pagamento
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Botões de navegação */}
+        {step <= 4 && (
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginTop: "48px",
+            paddingTop: "24px",
+            borderTop: "1px solid rgba(148,163,184,0.2)",
+          }}>
+            {step > 1 ? (
+              <button
+                onClick={handleBack}
+                disabled={isGenerating}
+                style={{
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(148,163,184,0.3)",
+                  backgroundColor: "transparent",
+                  color: "white",
+                  fontSize: "1rem",
+                  fontWeight: 500,
+                  cursor: isGenerating ? "not-allowed" : "pointer",
+                  opacity: isGenerating ? 0.5 : 1,
+                }}
+              >
+                Voltar
+              </button>
+            ) : (
+              <Link
+                href="/"
+                style={{
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(148,163,184,0.3)",
+                  color: "white",
+                  fontSize: "1rem",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  display: "inline-block",
+                }}
+              >
+                Cancelar
+              </Link>
+            )}
+
+            {step < 4 && (
+              <button
+                onClick={handleNext}
+                disabled={
+                  (step === 1 && !formData.projectType) ||
                   (step === 2 && (!formData.projectName || !formData.userEmail || !formData.aboutClient || !formData.targetAudience || !formData.keyPoints))
-                  ? 0.5
-                  : 1,
-              }}
-            >
-              Próximo
-            </button>
-          )}
-        </div>
+                }
+                style={{
+                  padding: "12px 32px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "rgba(59,130,246,1)",
+                  color: "white",
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  opacity: (step === 1 && !formData.projectType) ||
+                    (step === 2 && (!formData.projectName || !formData.userEmail || !formData.aboutClient || !formData.targetAudience || !formData.keyPoints))
+                    ? 0.5
+                    : 1,
+                }}
+              >
+                Próximo
+              </button>
+            )}
+          </div>
+        )}
       </section>
       
       <Footer />
